@@ -104,6 +104,18 @@ def _build_prompt(transcript: str, config: Config, meta: dict) -> str:
     ) or "- (no subjects configured)"
 
     context_bits = []
+    if config.user_name:
+        context_bits.append(
+            f"The person recording this meeting is {config.user_name} "
+            '(referred to as "me" in action items).'
+        )
+    known = [n for n in [config.user_name, *config.vocabulary] if n]
+    if known:
+        context_bits.append(
+            "Known names and terms (the transcriber may have garbled these — "
+            "if a word in the transcript is a close phonetic match, use the "
+            "correct spelling from this list): " + ", ".join(known)
+        )
     if meta.get("started"):
         context_bits.append(f"Recorded: {meta['started']}")
     if meta.get("platform"):

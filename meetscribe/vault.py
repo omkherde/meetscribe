@@ -122,7 +122,7 @@ def write_meeting(
     duration = _fmt_duration(meta.get("duration_seconds"))
     platform = meta.get("platform")
     subject_file = _safe_filename(notes.subject)
-    tags = ["meeting", *(_tag(t) for t in notes.tags if _tag(t))]
+    tags = list(dict.fromkeys(["meeting", *(_tag(t) for t in notes.tags if _tag(t))]))
 
     # --- meeting note -------------------------------------------------------
     fm = [

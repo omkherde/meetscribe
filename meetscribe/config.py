@@ -17,6 +17,16 @@ CONFIG_PATH = CONFIG_DIR / "config.yaml"
 DEFAULT_CONFIG_YAML = """\
 # meetscribe configuration
 
+# Your name. Helps the transcriber recognize it when spoken, and lets the
+# summarizer attribute action items to "me" correctly.
+user_name: null
+
+# Names and terms the transcriber often gets wrong (colleagues, product names,
+# jargon). These bias transcription and help the summarizer fix near-misses.
+vocabulary: []
+#  - Priya Sharma
+#  - MeetScribe
+
 # Where your Obsidian vault of meeting notes lives (open this folder in Obsidian).
 vault: ~/MeetingVault
 
@@ -79,6 +89,8 @@ class Config:
     ollama_url: str = "http://localhost:11434"
     ollama_num_ctx: int = 16384
     subjects: list[Subject] = field(default_factory=list)
+    user_name: str | None = None
+    vocabulary: list[str] = field(default_factory=list)
 
     @property
     def subject_names(self) -> list[str]:
@@ -117,6 +129,8 @@ def load_config(path: Path | None = None) -> Config:
         ollama_url=str(sm.get("ollama_url", "http://localhost:11434")).rstrip("/"),
         ollama_num_ctx=int(sm.get("ollama_num_ctx", 16384)),
         subjects=subjects,
+        user_name=(str(raw["user_name"]) if raw.get("user_name") else None),
+        vocabulary=[str(v) for v in (raw.get("vocabulary") or [])],
     )
 
 

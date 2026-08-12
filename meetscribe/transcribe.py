@@ -62,17 +62,31 @@ def _pick_backend(config: Config) -> str:
     return backend
 
 
+def _initial_prompt(config: Config) -> str | None:
+    """Vocabulary hint that biases Whisper toward names/terms it would
+    otherwise garble (e.g. unusual personal names)."""
+    terms = []
+    if config.user_name:
+        terms.append(config.user_name)
+    terms.extend(config.vocabulary)
+    if not terms:
+        return None
+    return "Meeting transcript. Participants and terms include: " + ", ".join(terms) + "."
+
+
 def transcribe(audio: np.ndarray, config: Config) -> list[Segment]:
     backend = _pick_backend(config)
     model = config.transcription_model
     language = config.transcription_language
+    prompt = _initial_prompt(config)
 
     if backend == "mlx":
         import mlx_whisper
 
         repo = f"mlx-community/whisper-{model}-mlx"
         result = mlx_whisper.transcribe(
-            audio, path_or_hf_repo=repo, language=language, verbose=None
+            audio, path_or_hf_repo=repo, language=language,
+            initial_prompt=prompt, verbose=None,
         )
         return [
             Segment(start=float(s["start"]), end=float(s["end"]), text=s["text"].strip())
@@ -84,7 +98,9 @@ def transcribe(audio: np.ndarray, config: Config) -> list[Segment]:
         from faster_whisper import WhisperModel
 
         wm = WhisperModel(model, device="cpu", compute_type="int8")
-        segments, _info = wm.transcribe(audio, language=language, vad_filter=True)
+        segments, _info = wm.transcribe(
+            audio, language=language, vad_filter=True, initial_prompt=prompt
+        )
         return [
             Segment(start=float(s.start), end=float(s.end), text=s.text.strip())
             for s in segments

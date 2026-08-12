@@ -125,11 +125,14 @@ That's it. On Ctrl+C, meetscribe transcribes locally, summarizes with your confi
 ```bash
 meetscribe record --title "1:1 with Sam" --subject Work
 meetscribe record --no-process               # record now, process later
+meetscribe stop                              # stop a recording from another terminal
 meetscribe process ~/.meetscribe/recordings/20260812-140002
 meetscribe process some-meeting.m4a          # works on any audio file too
 meetscribe transcribe <path>                 # transcript only, printed to stdout
 meetscribe list                              # meetings in the vault
 ```
+
+To stop a recording, press **Control+C** (the `⌃ control` key — not `⌘ command`) in the recording terminal, or run `meetscribe stop` from any other terminal.
 
 **First run:** macOS will ask for *System Audio Recording* and *Microphone* permission for your terminal app. Grant both, then re-run.
 
@@ -138,6 +141,9 @@ meetscribe list                              # meetings in the vault
 `meetscribe init` writes `~/.meetscribe/config.yaml`:
 
 ```yaml
+user_name: Om Kherde   # your name — see "Name recognition" below
+vocabulary: []         # colleague names / jargon the transcriber gets wrong
+
 vault: ~/MeetingVault
 keep_audio: true
 
@@ -162,6 +168,10 @@ subjects:
 ```
 
 Subjects are yours to define — the summarizer classifies each meeting into the best-fitting one (with your descriptions as guidance) or `Inbox` if nothing fits. Bump `transcription.model` to `small`/`medium` for better accuracy, or drop to `tiny` for speed.
+
+### Name recognition
+
+Speech models garble names they've never seen ("Om Kherde" → "HomeCurd"). Set `user_name` and add colleagues, product names, and jargon to `vocabulary` — these bias Whisper's transcription toward the correct spellings *and* let the summarizer repair near-miss transcriptions. Setting `user_name` also makes action items assigned to you show up as yours.
 
 ## Cost
 

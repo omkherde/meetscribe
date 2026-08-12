@@ -121,6 +121,28 @@ def cmd_transcribe(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_stop(args: argparse.Namespace) -> int:
+    import os
+    import signal as _signal
+
+    from .config import CONFIG_DIR
+
+    pidfile = CONFIG_DIR / "recording.pid"
+    if not pidfile.exists():
+        print("No recording in progress.")
+        return 1
+    try:
+        pid = int(pidfile.read_text().strip())
+        os.kill(pid, _signal.SIGTERM)
+        print(f"Stop signal sent to recording (pid {pid}). It will finish "
+              "processing in its own terminal.")
+        return 0
+    except (ValueError, ProcessLookupError):
+        pidfile.unlink(missing_ok=True)
+        print("Stale recording state cleaned up; no recording was running.")
+        return 1
+
+
 def cmd_list(args: argparse.Namespace) -> int:
     config = load_config()
     meetings_dir = config.vault / "Meetings"
@@ -166,6 +188,9 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("transcribe", help="print the transcript of a recording, nothing else")
     p.add_argument("path")
     p.set_defaults(func=cmd_transcribe)
+
+    p = sub.add_parser("stop", help="stop a recording started in another terminal")
+    p.set_defaults(func=cmd_stop)
 
     p = sub.add_parser("list", help="list meetings in the vault")
     p.set_defaults(func=cmd_list)

@@ -65,7 +65,13 @@ def record(config: Config, title: str | None = None) -> Path:
             "terminal in System Settings > Privacy & Security, then retry."
         )
 
-    print(f"● Recording ({platform or 'unknown platform'}) — press Ctrl+C to stop.")
+    print(
+        f"● Recording ({platform or 'unknown platform'}) — press Ctrl+C here "
+        "(or run `meetscribe stop` in another terminal) to stop."
+    )
+    pidfile = CONFIG_DIR / "recording.pid"
+    pidfile.parent.mkdir(parents=True, exist_ok=True)
+    pidfile.write_text(str(os.getpid()))
 
     # Stop cleanly on SIGTERM too (e.g. when driven by another process).
     def _on_sigterm(signum, frame):
@@ -79,6 +85,7 @@ def record(config: Config, title: str | None = None) -> Path:
         pass
     finally:
         signal.signal(signal.SIGTERM, previous_handler)
+        pidfile.unlink(missing_ok=True)
         if proc.poll() is None:
             proc.send_signal(signal.SIGINT)
             try:
