@@ -33,8 +33,15 @@ transcription:
   language: null           # e.g. "en"; null = auto-detect
 
 summarization:
+  # claude = best quality, costs ~$0.02-0.15 per meeting depending on model.
+  # ollama = 100% free and local; requires Ollama (https://ollama.com) and a
+  #          pulled model, e.g. `ollama pull llama3.1:8b`.
+  backend: claude          # claude | ollama
   model: claude-opus-5
   max_tokens: 16000
+  ollama_model: llama3.1:8b
+  ollama_url: http://localhost:11434
+  ollama_num_ctx: 16384    # context window; raise for very long meetings
 
 # The subjects your meetings get filed under. The summarizer picks the best
 # match; meetings that fit nothing land in "Inbox". Descriptions help Claude
@@ -65,8 +72,12 @@ class Config:
     transcription_backend: str = "auto"
     transcription_model: str = "base"
     transcription_language: str | None = None
+    summarization_backend: str = "claude"
     summarization_model: str = "claude-opus-5"
     summarization_max_tokens: int = 16000
+    ollama_model: str = "llama3.1:8b"
+    ollama_url: str = "http://localhost:11434"
+    ollama_num_ctx: int = 16384
     subjects: list[Subject] = field(default_factory=list)
 
     @property
@@ -99,8 +110,12 @@ def load_config(path: Path | None = None) -> Config:
         transcription_backend=str(tr.get("backend", "auto")),
         transcription_model=str(tr.get("model", "base")),
         transcription_language=tr.get("language"),
+        summarization_backend=str(sm.get("backend", "claude")),
         summarization_model=str(sm.get("model", "claude-opus-5")),
         summarization_max_tokens=int(sm.get("max_tokens", 16000)),
+        ollama_model=str(sm.get("ollama_model", "llama3.1:8b")),
+        ollama_url=str(sm.get("ollama_url", "http://localhost:11434")).rstrip("/"),
+        ollama_num_ctx=int(sm.get("ollama_num_ctx", 16384)),
         subjects=subjects,
     )
 

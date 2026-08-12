@@ -57,13 +57,23 @@ def _process_session(session_dir: Path, title: str | None, subject: str | None) 
         if "authentication" in str(e).lower():
             print(
                 "error: no Anthropic API credentials found. Set ANTHROPIC_API_KEY "
-                "(or run `ant auth login`) and re-run:\n"
+                "(or run `ant auth login`), or switch to free local summarization "
+                "with `summarization.backend: ollama` in your config, then re-run:\n"
                 f"  meetscribe process {session_dir}\n"
                 f"The transcript was saved to {session_dir / 'transcript.txt'}",
                 file=sys.stderr,
             )
             return 1
         raise
+    except RuntimeError as e:
+        print(f"error: {e}", file=sys.stderr)
+        if session_dir.is_dir():
+            print(
+                f"The transcript was saved to {session_dir / 'transcript.txt'}; "
+                f"re-run `meetscribe process {session_dir}` once fixed.",
+                file=sys.stderr,
+            )
+        return 1
     if subject:
         notes.subject = subject
 

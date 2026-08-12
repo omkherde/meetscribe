@@ -120,7 +120,36 @@ def _build_prompt(transcript: str, config: Config, meta: dict) -> str:
 
 
 def summarize(transcript: str, config: Config, meta: dict | None = None) -> MeetingNotes:
+    """Dispatch to the configured summarization backend."""
     meta = meta or {}
+    backend = config.summarization_backend
+    if backend == "claude":
+        data = _summarize_claude(transcript, config, meta)
+    elif backend == "ollama":
+        data = _summarize_ollama(transcript, config, meta)
+    else:
+        raise ValueError(
+            f"Unknown summarization backend {backend!r} (expected 'claude' or 'ollama')"
+        )
+
+    subject = data.get("subject") or "Inbox"
+    if subject not in config.subject_names and subject != "Inbox":
+        subject = "Inbox"
+
+    return MeetingNotes(
+        title=data.get("title") or meta.get("title") or "Untitled Meeting",
+        subject=subject,
+        summary=data.get("summary", ""),
+        key_points=data.get("key_points", []),
+        action_items=data.get("action_items", []),
+        questions=data.get("questions", []),
+        decisions=data.get("decisions", []),
+        people=data.get("people", []),
+        tags=data.get("tags", []),
+    )
+
+
+def _summarize_claude(transcript: str, config: Config, meta: dict) -> dict:
     client = anthropic.Anthropic()
     model = config.summarization_model
     schema = _schema(config.subject_names)
@@ -164,20 +193,51 @@ def summarize(transcript: str, config: Config, meta: dict | None = None) -> Meet
         )
 
     text = next(b.text for b in message.content if b.type == "text")
-    data = json.loads(text)
+    return json.loads(text)
 
-    subject = data.get("subject") or "Inbox"
-    if subject not in config.subject_names and subject != "Inbox":
-        subject = "Inbox"
 
-    return MeetingNotes(
-        title=data.get("title") or meta.get("title") or "Untitled Meeting",
-        subject=subject,
-        summary=data.get("summary", ""),
-        key_points=data.get("key_points", []),
-        action_items=data.get("action_items", []),
-        questions=data.get("questions", []),
-        decisions=data.get("decisions", []),
-        people=data.get("people", []),
-        tags=data.get("tags", []),
+def _summarize_ollama(transcript: str, config: Config, meta: dict) -> dict:
+    """Free, fully local summarization via Ollama's structured-output API."""
+    import urllib.error
+    import urllib.request
+
+    payload = {
+        "model": config.ollama_model,
+        "stream": False,
+        "format": _schema(config.subject_names),
+        "options": {"num_ctx": config.ollama_num_ctx, "temperature": 0},
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": _build_prompt(transcript, config, meta)},
+        ],
+    }
+    request = urllib.request.Request(
+        f"{config.ollama_url}/api/chat",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
     )
+    try:
+        with urllib.request.urlopen(request, timeout=1800) as response:
+            body = json.loads(response.read())
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode(errors="replace")[:300]
+        raise RuntimeError(
+            f"Ollama returned an error ({e.code}): {detail}\n"
+            f"If the model is missing, run: ollama pull {config.ollama_model}"
+        ) from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(
+            f"Could not reach Ollama at {config.ollama_url} ({e.reason}). "
+            "Is it running? Install from https://ollama.com, then:\n"
+            f"  ollama pull {config.ollama_model}"
+        ) from e
+
+    content = (body.get("message") or {}).get("content", "")
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(
+            f"Ollama model {config.ollama_model} did not return valid JSON. "
+            "Try a larger model (e.g. llama3.1:8b) in summarization.ollama_model."
+        ) from e
