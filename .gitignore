@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Swift
+audio/.build/
+audio/.swiftpm/
+
+# macOS
+.DS_Store
+
+# Local data — never commit recordings or personal notes
+*.wav
+recordings/

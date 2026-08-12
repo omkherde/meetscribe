@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meetscribe"
+version = "0.1.0"
+description = "Local-first AI meeting recorder: captures system audio + mic, transcribes with Whisper, summarizes with Claude, and files notes into an Obsidian vault."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=0.60",
+    "faster-whisper>=1.0",
+    "numpy",
+    "PyYAML",
+]
+
+[project.optional-dependencies]
+mlx = ["mlx-whisper"]
+
+[project.scripts]
+meetscribe = "meetscribe.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["meetscribe*"]
