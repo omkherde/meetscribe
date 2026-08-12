@@ -50,7 +50,10 @@ def _process_session(session_dir: Path, title: str | None, subject: str | None) 
     if session_dir.is_dir():
         (session_dir / "transcript.txt").write_text(transcript)
 
-    print("→ Summarizing with Claude...")
+    if config.summarization_backend == "ollama":
+        print(f"→ Summarizing locally with {config.ollama_model} (Ollama)...")
+    else:
+        print(f"→ Summarizing with {config.summarization_model}...")
     try:
         notes = summarize(transcript, config, meta)
     except TypeError as e:
