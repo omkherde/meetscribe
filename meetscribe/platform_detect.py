@@ -71,11 +71,39 @@ def detect_platform() -> str | None:
 
     try:
         out = subprocess.run(
-            ["ps", "-axo", "comm"], capture_output=True, text=True, timeout=10
+            ["ps", "-axo", "%cpu=,comm="], capture_output=True, text=True, timeout=10
         ).stdout
     except Exception:
         return None
-    for needle, label in _KNOWN_APPS:
-        if needle.lower() in out.lower():
-            return label
+
+    # Max CPU per candidate app across its processes.
+    busiest: dict[str, float] = {}
+    for line in out.splitlines():
+        parts = line.strip().split(None, 1)
+        if len(parts) != 2:
+            continue
+        cpu_str, comm = parts
+        try:
+            cpu = float(cpu_str)
+        except ValueError:
+            continue
+        label = _match(comm)
+        if label:
+            busiest[label] = max(busiest.get(label, 0.0), cpu)
+
+    if not busiest:
+        return None
+
+    # An app actively in a call burns real CPU (audio/video pipelines); apps
+    # that merely auto-start at login (Teams, Zoom, Slack) idle near zero.
+    # Prefer the busiest candidate when one is clearly active — this is what
+    # lets a Meet call inside a browser beat an idle Teams in the background.
+    label, cpu = max(busiest.items(), key=lambda kv: kv[1])
+    if cpu >= 10.0:
+        return label
+
+    # Nothing clearly active: fall back to specificity order.
+    for _needle, lab in _KNOWN_APPS:
+        if lab in busiest:
+            return lab
     return None
