@@ -173,6 +173,17 @@ Subjects are yours to define — the summarizer classifies each meeting into the
 
 Speech models garble names they've never seen ("Om Kherde" → "HomeCurd"). Set `user_name` and add colleagues, product names, and jargon to `vocabulary` — these bias Whisper's transcription toward the correct spellings *and* let the summarizer repair near-miss transcriptions. Setting `user_name` also makes action items assigned to you show up as yours.
 
+## Ask Claude about your meetings (optional)
+
+Because meetscribe's output is plain Markdown, anything that can read files or speak [MCP](https://modelcontextprotocol.io) can use your meeting history as context. A free, fully-local pairing that works well is [memobsidian](https://github.com/akash-sr/memobsidian) (MIT):
+
+- Indexes your vault into **Supermemory Local**, a semantic search engine that runs entirely on `localhost` with a built-in local embedding model — no API keys, no cost, nothing uploaded.
+- Exposes `search_memory` to Claude Desktop, Claude Code, Cursor, and other MCP clients, so you can ask *"what did we decide about the launch date?"* and get answers grounded in your own meetings.
+
+Setup sketch: clone memobsidian, run `memobsidian init` pointing at your meetscribe vault, enable its Obsidian plugin, and run its **"Sync vault to Supermemory"** command after new meetings land. (Its optional Granola exporter pulls in a third-party binary — not needed for meetscribe; the vault sync and MCP server work without it.)
+
+**Privacy note:** the index stays on your machine, but any note a search *returns* becomes part of your Claude conversation — i.e. it goes to the AI provider at query time. If your vault holds sensitive meetings, configure the tool to require your approval per call in your MCP client instead of always-allow.
+
 ## Cost
 
 Recording and transcription are always free and local. Summarization is the only step that can cost money, depending on your mode:
