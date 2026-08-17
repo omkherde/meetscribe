@@ -197,6 +197,11 @@ Because meetscribe's output is plain Markdown, anything that can read files or s
 
 Setup sketch: clone memobsidian, run `memobsidian init` pointing at your meetscribe vault, enable its Obsidian plugin, and run its **"Sync vault to Supermemory"** command after new meetings land. (Its optional Granola exporter pulls in a third-party binary — not needed for meetscribe; the vault sync and MCP server work without it.)
 
+Two operational notes from real use:
+
+- **The sync only adds new notes** — it never updates edited notes or removes deleted ones from the index. Reconcile periodically (compare indexed content against disk; delete + re-add what changed, purge what's gone) — easily done by pointing Claude Code at the Supermemory API (`/v3/documents` on localhost).
+- **The vault can live in an iCloud/synced folder** with no impact — every tool here reads plain local files; cloud sync is invisible to the pipeline. Keep a `private_vault` outside the synced/indexed folder for meetings that should stay off every cloud and out of the index.
+
 **Privacy note:** the index stays on your machine, but any note a search *returns* becomes part of your Claude conversation — i.e. it goes to the AI provider at query time. If your vault holds sensitive meetings, configure the tool to require your approval per call in your MCP client instead of always-allow.
 
 ## Cost
