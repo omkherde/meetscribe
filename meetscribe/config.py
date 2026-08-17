@@ -30,6 +30,12 @@ vocabulary: []
 # Where your Obsidian vault of meeting notes lives (open this folder in Obsidian).
 vault: ~/MeetingVault
 
+# Optional second vault for sensitive meetings. Subjects marked `private: true`
+# below are filed here instead of the main vault — useful when the main vault
+# is indexed/synced by other tools (search plugins, AI assistants) and some
+# meetings must never be.
+# private_vault: ~/MeetingVault-Private
+
 # Where raw recordings are stored while (and after) processing.
 recordings_dir: ~/.meetscribe/recordings
 
@@ -56,6 +62,7 @@ summarization:
 # The subjects your meetings get filed under. The summarizer picks the best
 # match; meetings that fit nothing land in "Inbox". Descriptions help Claude
 # classify correctly.
+# Add `private: true` to a subject to file its meetings into private_vault.
 subjects:
   - name: Work
     description: Job, team standups, client calls, projects at work.
@@ -72,12 +79,14 @@ subjects:
 class Subject:
     name: str
     description: str = ""
+    private: bool = False
 
 
 @dataclass
 class Config:
     vault: Path
     recordings_dir: Path
+    private_vault: Path | None = None
     keep_audio: bool = True
     transcription_backend: str = "auto"
     transcription_model: str = "base"
@@ -96,6 +105,10 @@ class Config:
     def subject_names(self) -> list[str]:
         return [s.name for s in self.subjects]
 
+    @property
+    def private_subject_names(self) -> set[str]:
+        return {s.name for s in self.subjects if s.private}
+
 
 def _expand(p: str) -> Path:
     return Path(os.path.expanduser(str(p))).resolve()
@@ -111,12 +124,17 @@ def load_config(path: Path | None = None) -> Config:
     tr = raw.get("transcription") or {}
     sm = raw.get("summarization") or {}
     subjects = [
-        Subject(name=str(s.get("name")), description=str(s.get("description") or ""))
+        Subject(
+            name=str(s.get("name")),
+            description=str(s.get("description") or ""),
+            private=bool(s.get("private", False)),
+        )
         for s in (raw.get("subjects") or [])
         if s.get("name")
     ]
     return Config(
         vault=_expand(raw.get("vault", "~/MeetingVault")),
+        private_vault=(_expand(raw["private_vault"]) if raw.get("private_vault") else None),
         recordings_dir=_expand(raw.get("recordings_dir", "~/.meetscribe/recordings")),
         keep_audio=bool(raw.get("keep_audio", True)),
         transcription_backend=str(tr.get("backend", "auto")),

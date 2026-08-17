@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from . import __version__
@@ -80,8 +81,16 @@ def _process_session(session_dir: Path, title: str | None, subject: str | None) 
     if subject:
         notes.subject = subject
 
-    ensure_vault(config)
-    written = write_meeting(config, notes, transcript, meta)
+    target = config
+    if notes.subject in config.private_subject_names and config.private_vault:
+        # Private subjects go to the private vault, which write_meeting builds
+        # out on demand — deliberately not ensure_vault'd so public subject
+        # hubs never appear there.
+        target = replace(config, vault=config.private_vault)
+        print(f"→ '{notes.subject}' is a private subject — filing into {target.vault}")
+    else:
+        ensure_vault(config)
+    written = write_meeting(target, notes, transcript, meta)
 
     if not config.keep_audio and session_dir.is_dir():
         for wav in session_dir.glob("*.wav"):

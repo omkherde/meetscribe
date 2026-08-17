@@ -169,6 +169,21 @@ subjects:
 
 Subjects are yours to define — the summarizer classifies each meeting into the best-fitting one (with your descriptions as guidance) or `Inbox` if nothing fits. Bump `transcription.model` to `small`/`medium` for better accuracy, or drop to `tiny` for speed.
 
+### Private subjects
+
+If your main vault is indexed by other tools (search plugins, AI assistants — see below), some meetings may be too sensitive to include. Set a `private_vault` and mark subjects `private: true`:
+
+```yaml
+private_vault: ~/MeetingVault-Private
+
+subjects:
+  - name: Lab Research
+    description: Research meetings that may discuss patient data.
+    private: true
+```
+
+Meetings classified into a private subject are filed into `private_vault` instead — a separate folder that indexing tools pointed at your main vault never see. Open it as a second vault in Obsidian when you need it, and share individual notes with an AI assistant only by explicit choice.
+
 ### Name recognition
 
 Speech models garble names they've never seen ("Om Kherde" → "HomeCurd"). Set `user_name` and add colleagues, product names, and jargon to `vocabulary` — these bias Whisper's transcription toward the correct spellings *and* let the summarizer repair near-miss transcriptions. Setting `user_name` also makes action items assigned to you show up as yours.
