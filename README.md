@@ -56,6 +56,8 @@ MeetingVault/
 
 Each meeting note links to its subject hub (`[[Work]]`) and attendees (`[[Alice]]`), so Obsidian's graph view stratifies your meetings by subject and person automatically.
 
+> **Building the whole memory system** (meetscribe + Claude search + Granola bridge + handwritten-note OCR + automation)? Follow [INSTALL.md](INSTALL.md) — a stage-by-stage setup guide from scratch.
+
 ## Requirements
 
 - macOS **14.4+** (Core Audio process taps)
