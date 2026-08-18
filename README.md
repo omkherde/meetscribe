@@ -130,6 +130,7 @@ meetscribe process ~/.meetscribe/recordings/20260812-140002
 meetscribe process some-meeting.m4a          # works on any audio file too
 meetscribe transcribe <path>                 # transcript only, printed to stdout
 meetscribe list                              # meetings in the vault
+meetscribe notes                             # OCR handwritten-note PDFs into the vault (see below)
 ```
 
 To stop a recording, press **Control+C** (the `⌃ control` key — not `⌘ command`) in the recording terminal, or run `meetscribe stop` from any other terminal.
@@ -188,6 +189,19 @@ Meetings classified into a private subject are filed into `private_vault` instea
 
 Speech models garble names they've never seen ("Om Kherde" → "HomeCurd"). Set `user_name` and add colleagues, product names, and jargon to `vocabulary` — these bias Whisper's transcription toward the correct spellings *and* let the summarizer repair near-miss transcriptions. Setting `user_name` also makes action items assigned to you show up as yours.
 
+## Handwritten notes (optional)
+
+If you take handwritten notes on an iPad (GoodNotes, Notability, Apple Notes…), `meetscribe notes` folds them into the same vault. Export pages as PDF into a folder, and meetscribe OCRs them **locally** with Apple's Vision framework — the engine behind Live Text, so it reads handwriting — and files each PDF next to a Markdown companion holding the recognized text:
+
+```
+MeetingVault/Handwritten/<Subject>/2026-09-02 synaptic plasticity.md    # frontmatter + OCR text (searchable)
+MeetingVault/Handwritten/<Subject>/2026-09-02 synaptic plasticity.pdf   # your actual handwriting (embedded in the note)
+```
+
+Point `notes.inbox` in the config at a synced folder (e.g. iCloud Drive) that your tablet exports into, then `meetscribe notes` sweeps it: each file is routed by filename (`<Subject> <YYYY-MM-DD> <title>.pdf` — subject prefix matched against your configured subjects, private subjects go to `private_vault`), OCR'd, filed, and removed from the inbox. `meetscribe notes <file> --subject X` handles one-offs.
+
+The OCR text is a search index, not a reading copy — equations and diagrams don't survive recognition, but the PDF alongside is the artifact you actually open. Everything stays on-device; OCR adds ~1 second per page.
+
 ## Ask Claude about your meetings (optional)
 
 Because meetscribe's output is plain Markdown, anything that can read files or speak [MCP](https://modelcontextprotocol.io) can use your meeting history as context. A free, fully-local pairing that works well is [memobsidian](https://github.com/akash-sr/memobsidian) (MIT):
@@ -234,6 +248,7 @@ Set `keep_audio: false` to delete WAVs after processing.
 
 ```
 audio/          Swift package: audiocap (system audio + mic capture)
+ocr/            Swift package: ocrtext (local handwriting OCR via Apple Vision)
 meetscribe/     Python package: CLI, transcription, summarization, vault writer
 Makefile        build + install
 ```

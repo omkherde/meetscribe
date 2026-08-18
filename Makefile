@@ -2,12 +2,14 @@ PREFIX := $(HOME)/.meetscribe
 
 .PHONY: build install clean
 
-## Build the Swift system-audio capture helper and install it to ~/.meetscribe/bin
+## Build the Swift helpers (audio capture + OCR) and install them to ~/.meetscribe/bin
 build:
 	cd audio && swift build -c release
+	cd ocr && swift build -c release
 	mkdir -p $(PREFIX)/bin
 	cp audio/.build/release/audiocap $(PREFIX)/bin/audiocap
-	@echo "audiocap installed to $(PREFIX)/bin/audiocap"
+	cp ocr/.build/release/ocrtext $(PREFIX)/bin/ocrtext
+	@echo "audiocap + ocrtext installed to $(PREFIX)/bin"
 
 ## Build the helper and install the Python package + CLI
 install: build
@@ -20,3 +22,4 @@ install: build
 
 clean:
 	cd audio && swift package clean
+	cd ocr && swift package clean

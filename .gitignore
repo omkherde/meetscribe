@@ -10,6 +10,8 @@ venv/
 # Swift
 audio/.build/
 audio/.swiftpm/
+ocr/.build/
+ocr/.swiftpm/
 
 # macOS
 .DS_Store

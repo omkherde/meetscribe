@@ -39,6 +39,14 @@ vault: ~/MeetingVault
 # Where raw recordings are stored while (and after) processing.
 recordings_dir: ~/.meetscribe/recordings
 
+# Handwritten-note ingest (`meetscribe notes`): a folder swept for PDF/image
+# exports of handwritten notes (e.g. from GoodNotes on an iPad, saved to an
+# iCloud Drive folder). Each file is OCR'd locally with Apple Vision and filed
+# into <vault>/Handwritten/<Subject>/ next to its original. Name files like
+# "NEU 330 2026-09-02 optional title.pdf" to route by subject and date.
+# notes:
+#   inbox: ~/Library/Mobile Documents/com~apple~CloudDocs/MeetingNotes Inbox
+
 # Keep the audio files after a meeting has been processed.
 keep_audio: true
 
@@ -100,6 +108,7 @@ class Config:
     subjects: list[Subject] = field(default_factory=list)
     user_name: str | None = None
     vocabulary: list[str] = field(default_factory=list)
+    notes_inbox: Path | None = None
 
     @property
     def subject_names(self) -> list[str]:
@@ -149,6 +158,7 @@ def load_config(path: Path | None = None) -> Config:
         subjects=subjects,
         user_name=(str(raw["user_name"]) if raw.get("user_name") else None),
         vocabulary=[str(v) for v in (raw.get("vocabulary") or [])],
+        notes_inbox=(_expand(nt["inbox"]) if (nt := raw.get("notes") or {}).get("inbox") else None),
     )
 
 

@@ -119,6 +119,64 @@ def cmd_process(args: argparse.Namespace) -> int:
     return _process_session(path, args.title, args.subject)
 
 
+def _ingest_note_file(config, path: Path, subject: str | None, title: str | None) -> int:
+    from .ink import ocr_file, parse_inbox_name, write_handwritten
+
+    parsed_subject, day, parsed_title = parse_inbox_name(path, config.subject_names)
+    subject = subject or parsed_subject or "Inbox"
+    title = title or parsed_title
+
+    print(f"→ OCR (local, Apple Vision): {path.name}")
+    text = ocr_file(path)
+
+    target = config
+    if subject in config.private_subject_names and config.private_vault:
+        target = replace(config, vault=config.private_vault)
+        print(f"→ '{subject}' is a private subject — filing into {target.vault}")
+    written = write_handwritten(target, subject, day, title, text, path)
+    print(f"✓ Filed under {subject}: {written}")
+    return 0
+
+
+def cmd_notes(args: argparse.Namespace) -> int:
+    config = load_config()
+    if args.path:
+        path = Path(args.path).expanduser().resolve()
+        if not path.exists():
+            print(f"error: {path} does not exist", file=sys.stderr)
+            return 1
+        return _ingest_note_file(config, path, args.subject, args.title)
+
+    from .ink import SUPPORTED_SUFFIXES
+
+    inbox = config.notes_inbox
+    if not inbox:
+        print(
+            "error: no inbox configured. Set `notes.inbox` in your config, or pass "
+            "a file: meetscribe notes <file.pdf>",
+            file=sys.stderr,
+        )
+        return 1
+    files = sorted(
+        p for p in inbox.iterdir()
+        if p.is_file() and not p.name.startswith(".")
+        and p.suffix.lower() in SUPPORTED_SUFFIXES
+    ) if inbox.is_dir() else []
+    if not files:
+        print(f"Nothing to ingest — inbox is empty ({inbox}).")
+        return 0
+    failures = 0
+    for f in files:
+        try:
+            _ingest_note_file(config, f, args.subject, None)
+        except Exception as e:
+            failures += 1
+            print(f"error: {f.name}: {e}", file=sys.stderr)
+    done = len(files) - failures
+    print(f"\n{done} note(s) filed" + (f", {failures} failed (left in inbox)" if failures else "") + ".")
+    return 1 if failures else 0
+
+
 def cmd_transcribe(args: argparse.Namespace) -> int:
     config = load_config()
     from .transcribe import format_transcript, load_session_audio, transcribe
@@ -193,6 +251,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--title", help="title hint for the meeting")
     p.add_argument("--subject", help="force a subject instead of auto-classifying")
     p.set_defaults(func=cmd_process)
+
+    p = sub.add_parser("notes", help="OCR handwritten-note PDFs/images into the vault "
+                       "(no args = sweep the notes.inbox folder)")
+    p.add_argument("path", nargs="?", help="a single PDF/image; omit to sweep the inbox")
+    p.add_argument("--subject", help="force a subject instead of parsing the filename")
+    p.add_argument("--title", help="title override (single-file mode)")
+    p.set_defaults(func=cmd_notes)
 
     p = sub.add_parser("transcribe", help="print the transcript of a recording, nothing else")
     p.add_argument("path")
