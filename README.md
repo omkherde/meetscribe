@@ -198,7 +198,9 @@ MeetingVault/Handwritten/<Subject>/2026-09-02 synaptic plasticity.md    # frontm
 MeetingVault/Handwritten/<Subject>/2026-09-02 synaptic plasticity.pdf   # your actual handwriting (embedded in the note)
 ```
 
-Point `notes.inbox` in the config at a synced folder (e.g. iCloud Drive) that your tablet exports into, then `meetscribe notes` sweeps it: each file is routed by filename (`<Subject> <YYYY-MM-DD> <title>.pdf` — subject prefix matched against your configured subjects, private subjects go to `private_vault`), OCR'd, filed, and removed from the inbox. `meetscribe notes <file> --subject X` handles one-offs.
+Point `notes.inbox` in the config at a synced folder (e.g. iCloud Drive) that your tablet exports into, then `meetscribe notes` sweeps it: each file is routed by filename, OCR'd, filed, and removed from the inbox. Routing is forgiving — a configured subject name appearing anywhere in the filename wins (so naming your notebooks after your subjects means default export names just work), a `YYYY-MM-DD` in the name sets the date (else the file's date), and private subjects go to `private_vault`. `meetscribe notes <file> --subject X` handles one-offs.
+
+For a zero-command workflow, pair it with a launchd agent that uses `WatchPaths` on the inbox folder to run `meetscribe notes` whenever an export lands — notes become searchable minutes after leaving the tablet.
 
 The OCR text is a search index, not a reading copy — equations and diagrams don't survive recognition, but the PDF alongside is the artifact you actually open. Everything stays on-device; OCR adds ~1 second per page.
 

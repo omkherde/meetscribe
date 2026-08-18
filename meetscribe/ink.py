@@ -57,18 +57,21 @@ def parse_inbox_name(
     """Derive (subject, date, title) from a filename like
     "NEU 330 2026-09-02 synaptic plasticity.pdf".
 
-    Subject: longest case-insensitive subject-name prefix, or None.
-    Date: first YYYY-MM-DD in the name, else the file's mtime.
-    Title: whatever is left, else "Notes".
+    Subject: longest subject name appearing anywhere in the filename
+    (case-insensitive, on word boundaries), or None. Date: first YYYY-MM-DD
+    in the name, else the file's mtime. Title: whatever is left, else "Notes".
     """
     stem = path.stem.strip()
     rest = stem
 
     subject = None
     for name in sorted(subject_names, key=len, reverse=True):
-        if rest.lower().startswith(name.lower()):
+        m = re.search(
+            rf"(?<![A-Za-z0-9]){re.escape(name)}(?![A-Za-z0-9])", rest, re.IGNORECASE
+        )
+        if m:
             subject = name
-            rest = rest[len(name):]
+            rest = rest[: m.start()] + rest[m.end():]
             break
 
     m = _DATE_RE.search(rest)
