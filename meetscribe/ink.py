@@ -65,8 +65,21 @@ def find_ocrtext() -> Path:
     )
 
 
+def _materialize(path: Path) -> None:
+    """Force a cloud-synced file to be fully downloaded before use.
+
+    iCloud may leave a file dataless (a placeholder with a size but no local
+    bytes); PDF/image APIs fail to open those. Reading the file end-to-end
+    blocks until the content is actually present.
+    """
+    with open(path, "rb") as f:
+        while f.read(1 << 20):
+            pass
+
+
 def ocr_file(path: Path) -> str:
     """OCR a PDF or image; returns text with pages separated by form feeds."""
+    _materialize(path)
     result = subprocess.run(
         [str(find_ocrtext()), str(path)], capture_output=True, text=True, timeout=600
     )
