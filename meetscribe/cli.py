@@ -140,6 +140,17 @@ def _ingest_note_file(config, path: Path, subject: str | None, title: str | None
 
 def cmd_notes(args: argparse.Namespace) -> int:
     config = load_config()
+    from .ink import sweep_lock
+
+    with sweep_lock() as acquired:
+        if not acquired:
+            print("Another notes sweep is already running; skipping (it will pick "
+                  "up the same files).")
+            return 0
+        return _cmd_notes_locked(config, args)
+
+
+def _cmd_notes_locked(config, args: argparse.Namespace) -> int:
     if args.path:
         path = Path(args.path).expanduser().resolve()
         if not path.exists():

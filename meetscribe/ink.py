@@ -8,15 +8,39 @@ and diagrams do not survive OCR; that's acceptable by design.
 
 from __future__ import annotations
 
+import fcntl
 import os
 import re
 import shutil
 import subprocess
+from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
 
 from .config import CONFIG_DIR, Config
 from .vault import _safe_filename
+
+
+@contextmanager
+def sweep_lock():
+    """Serialize note ingestion across processes (watcher vs. manual runs).
+
+    Yields True when the lock was acquired, False when another sweep already
+    holds it — in which case the caller should simply skip, since the running
+    sweep will pick up the same files.
+    """
+    lock_path = CONFIG_DIR / "notes.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(lock_path, "w") as f:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -99,7 +123,9 @@ def write_handwritten(
     artifact = folder / f"{base}{pdf_src.suffix.lower()}"
     note = folder / f"{base}.md"
 
-    artifact.unlink(missing_ok=True)
+    # shutil.move overwrites an existing artifact itself; never pre-delete it —
+    # a concurrent sweep that lost the race to move pdf_src would otherwise
+    # destroy the winner's freshly filed copy.
     shutil.move(str(pdf_src), artifact)
 
     pages = [p.strip() for p in ocr_text.split("\f")]
