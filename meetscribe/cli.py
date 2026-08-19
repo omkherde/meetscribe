@@ -123,7 +123,16 @@ def _ingest_note_file(config, path: Path, subject: str | None, title: str | None
     from .ink import ocr_file, parse_inbox_name, write_handwritten
 
     parsed_subject, day, parsed_title = parse_inbox_name(path, config.subject_names)
-    subject = subject or parsed_subject or "Inbox"
+    subject = subject or parsed_subject
+    if not subject:
+        # No configured subject in the filename: self-organize by topic.
+        # "DSP - fourier transforms.pdf" → folder "DSP", title "fourier transforms";
+        # otherwise the whole name is the topic ("Sociology.pdf" → folder "Sociology").
+        topic, sep, rest = parsed_title.partition(" - ")
+        if sep and topic.strip() and rest.strip():
+            subject, parsed_title = topic.strip(), rest.strip()
+        else:
+            subject = parsed_title
     title = title or parsed_title
 
     print(f"→ OCR (local, Apple Vision): {path.name}")
