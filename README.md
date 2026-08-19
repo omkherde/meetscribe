@@ -222,7 +222,7 @@ Setup sketch: clone memobsidian, run `memobsidian init` pointing at your meetscr
 
 Two operational notes from real use:
 
-- **The sync only adds new notes** — it never updates edited notes or removes deleted ones from the index. Reconcile periodically (compare indexed content against disk; delete + re-add what changed, purge what's gone) — easily done by pointing Claude Code at the Supermemory API (`/v3/documents` on localhost).
+- **The sync only adds new notes** — it never updates edited notes or removes deleted ones from the index. Reconcile periodically (compare indexed content against disk; delete + re-add what changed, purge what's gone) — easily done by pointing Claude Code at the Supermemory API (`/v3/documents` on localhost). Two quirks your reconciler should expect: `DELETE` returns **409** while a document is still embedding (retry briefly, else defer to the next run), and a document can get *stuck* in `indexing` status if its embedding job dies — persistent 409s across runs mean restart Supermemory, after which the delete goes through.
 - **The vault can live in an iCloud/synced folder** with no impact — every tool here reads plain local files; cloud sync is invisible to the pipeline. Keep a `private_vault` outside the synced/indexed folder for meetings that should stay off every cloud and out of the index.
 
 **Privacy note:** the index stays on your machine, but any note a search *returns* becomes part of your Claude conversation — i.e. it goes to the AI provider at query time. If your vault holds sensitive meetings, configure the tool to require your approval per call in your MCP client instead of always-allow.
