@@ -70,11 +70,29 @@ def _materialize(path: Path) -> None:
 
     iCloud may leave a file dataless (a placeholder with a size but no local
     bytes); PDF/image APIs fail to open those. Reading the file end-to-end
-    blocks until the content is actually present.
+    verifies the content is present — but macOS can refuse that read with
+    EDEADLK instead of blocking, so on failure ask iCloud to download
+    explicitly (brctl) and retry briefly. Raises if the file still isn't
+    local, leaving it in the inbox for a later sweep.
     """
-    with open(path, "rb") as f:
-        while f.read(1 << 20):
-            pass
+    import errno
+    import time
+
+    for attempt in range(5):
+        try:
+            with open(path, "rb") as f:
+                while f.read(1 << 20):
+                    pass
+            return
+        except OSError as e:
+            if e.errno != errno.EDEADLK:
+                raise
+            subprocess.run(["brctl", "download", str(path)],
+                           capture_output=True, timeout=30)
+            time.sleep(3 * (attempt + 1))
+    raise RuntimeError(
+        f"{path.name} hasn't finished downloading from iCloud; will retry on a later sweep"
+    )
 
 
 def ocr_file(path: Path) -> str:
