@@ -122,7 +122,7 @@ def cmd_process(args: argparse.Namespace) -> int:
 def _ingest_note_file(config, path: Path, subject: str | None, title: str | None) -> int:
     from .ink import ocr_file, parse_inbox_name, write_handwritten
 
-    parsed_subject, day, parsed_title = parse_inbox_name(path, config.subject_names)
+    parsed_subject, day, parsed_title, dated = parse_inbox_name(path, config.subject_names)
     subject = subject or parsed_subject
     if not subject:
         # No configured subject in the filename: self-organize by topic.
@@ -142,8 +142,11 @@ def _ingest_note_file(config, path: Path, subject: str | None, title: str | None
     if subject in config.private_subject_names and config.private_vault:
         target = replace(config, vault=config.private_vault)
         print(f"→ '{subject}' is a private subject — filing into {target.vault}")
-    written = write_handwritten(target, subject, day, title, text, path)
-    print(f"✓ Filed under {subject}: {written}")
+    written = write_handwritten(target, subject, day, title, text, path, dated=dated)
+    if dated:
+        print(f"✓ Filed under {subject}: {written}")
+    else:
+        print(f"✓ Updated notebook '{written.stem}' under {subject}: {written}")
     return 0
 
 

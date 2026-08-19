@@ -90,13 +90,16 @@ def ocr_file(path: Path) -> str:
 
 def parse_inbox_name(
     path: Path, subject_names: list[str]
-) -> tuple[str | None, date, str]:
-    """Derive (subject, date, title) from a filename like
+) -> tuple[str | None, date, str, bool]:
+    """Derive (subject, date, title, dated) from a filename like
     "NEU 330 2026-09-02 synaptic plasticity.pdf".
 
     Subject: longest subject name appearing anywhere in the filename
     (case-insensitive, on word boundaries), or None. Date: first YYYY-MM-DD
     in the name, else the file's mtime. Title: whatever is left, else "Notes".
+    `dated` is True only when the filename itself carried a date — an explicit
+    dated snapshot; without one the export is treated as a living notebook
+    document that each re-export replaces.
     """
     stem = path.stem.strip()
     rest = stem
@@ -119,20 +122,31 @@ def parse_inbox_name(
         day = datetime.fromtimestamp(path.stat().st_mtime).date()
 
     title = re.sub(r"\s+", " ", rest).strip(" -_–—")
-    return subject, day, title or "Notes"
+    return subject, day, title or "Notes", bool(m)
 
 
 def write_handwritten(
-    config: Config, subject: str, day: date, title: str, ocr_text: str, pdf_src: Path
+    config: Config,
+    subject: str,
+    day: date,
+    title: str,
+    ocr_text: str,
+    pdf_src: Path,
+    dated: bool = True,
 ) -> Path:
     """File the original ink + its OCR companion into <vault>/Handwritten/<subject>/.
 
-    Re-ingesting the same name overwrites the pair, so a re-export refreshes it.
-    Returns the companion note's path.
+    dated=True files a date-prefixed snapshot; dated=False maintains a single
+    living document per notebook (no date prefix) that each re-export replaces —
+    whole-notebook exports never accumulate redundant copies. Re-ingesting the
+    same name overwrites the pair either way. Returns the companion note's path.
     """
     folder = config.vault / "Handwritten" / _safe_filename(subject)
     folder.mkdir(parents=True, exist_ok=True)
-    base = f"{day.isoformat()} {_safe_filename(title)}"
+    if dated:
+        base = f"{day.isoformat()} {_safe_filename(title)}"
+    else:
+        base = _safe_filename(title if title != "Notes" else subject)
     artifact = folder / f"{base}{pdf_src.suffix.lower()}"
     note = folder / f"{base}.md"
 
@@ -150,10 +164,11 @@ def write_handwritten(
     else:
         body_text = pages[0] if pages and pages[0] else "*(no text recognized)*"
 
+    updated_line = "" if dated else f"\nupdated: {day.isoformat()}"
     note.write_text(
         f"""---
 title: "{title}"
-date: {day.isoformat()}
+date: {day.isoformat()}{updated_line}
 subject: "{subject}"
 source: handwritten
 tags: [handwritten]

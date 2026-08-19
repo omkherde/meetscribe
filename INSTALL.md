@@ -144,11 +144,14 @@ notes:
   inbox: ~/Library/Mobile Documents/com~apple~CloudDocs/MeetingNotes Inbox
 ```
 
-Create that folder, and on the tablet export lecture pages as PDF into it.
-`meetscribe notes` sweeps it: local OCR (Apple Vision — reads handwriting,
-~1s/page), then files the PDF + a searchable Markdown companion into
-`vault/Handwritten/<Subject>/`. Equations/diagrams don't OCR; the PDF next to
-the note is the artifact you read.
+Create that folder, and on the tablet export the **whole notebook** as PDF into
+it after writing — no page selection. `meetscribe notes` sweeps it: local OCR
+(Apple Vision — reads handwriting, ~1s/page), then files the PDF + a searchable
+Markdown companion into `vault/Handwritten/<Subject>/`. An export with no date
+in the filename maintains a single *living document* per notebook (each export
+replaces the last — no redundant accumulation); a `YYYY-MM-DD` in the filename
+files a frozen dated snapshot instead. Equations/diagrams don't OCR; the PDF
+next to the note is the artifact you read.
 
 To make it zero-command, add a LaunchAgent with `WatchPaths` on the inbox
 running `meetscribe notes` + your index-refresh script, plus a `StartInterval`
